@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>乌台诗案 · 沉浸式探案卷宗</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' fill='%239d2b22'/%3E%3Ctext x='32' y='46' font-size='38' text-anchor='middle' fill='%23f1e9d6' font-family='serif'%3E案%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+/* ============ 基础 ============ */
+:root{
+  --paper:#f1e9d6; --paper-2:#e9dfc6; --paper-3:#ddd0b0;
+  --ink:#2a2620; --ink-2:#574f3e; --ink-3:#8a7f66;
+  --line:#c9b98d; --line-2:#b3a175;
+  --cin:#9d2b22; --cin-2:#7c2019; --cin-soft:#c96a5a;
+  --moss:#4c5b49; --moss-2:#6f7f66;
+  --serif:'Noto Serif SC','Kaiti SC','STKaiti','KaiTi','Songti SC','SimSun',serif;
+  --sans:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--serif);
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(120,98,55,.10), transparent 42%),
+    radial-gradient(ellipse at 88% 20%, rgba(120,98,55,.08), transparent 40%),
+    radial-gradient(ellipse at 30% 88%, rgba(120,98,55,.09), transparent 45%),
+    radial-gradient(ellipse at 78% 82%, rgba(120,98,55,.07), transparent 40%);
+  min-height:100vh;
+  line-height:1.9;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.5 0 0 0 0 0.42 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#app{position:relative; z-index:1;}
+.hidden{display:none !important;}
+button{font-family:inherit; cursor:pointer;}
+.view{padding-bottom:90px;}
+
+/* ============ 通用组件 ============ */
+.stamp{
+  display:inline-block; border:2px solid var(--cin); color:var(--cin);
+  padding:.15em .55em; font-size:.82em; letter-spacing:.18em;
+  transform:rotate(-4deg); line-height:1.5; border-radius:2px;
+  box-shadow:inset 0 0 0 1px var(--paper);
+  background:rgba(157,43,34,.04);
+}
+.stamp.ghost{border-color:var(--ink-3); color:var(--ink-3); box-shadow:none;}
+.stamp.fill{background:var(--cin); color:var(--paper); border-color:var(--cin);}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin:56px 0 22px; flex-wrap:wrap;}
+.sec-head .sec-t{font-size:1.5em; font-weight:900; letter-spacing:.28em;}
+.sec-head .sec-sub{font-size:.85em; color:var(--ink-2); letter-spacing:.12em;}
+.sec-head::after{content:""; flex:1; border-top:1px dashed var(--line-2); transform:translateY(-6px);}
+
+.btn-ink{
+  border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  font-size:1.05em; letter-spacing:.35em; padding:.85em 2.6em; border-radius:2px;
+  transition:background .25s, color .25s, transform .15s, box-shadow .25s;
+  box-shadow:3px 3px 0 rgba(42,38,32,.25);
+}
+.btn-ink:hover{background:var(--cin); border-color:var(--cin); box-shadow:4px 4px 0 rgba(124,32,25,.3); transform:translate(-1px,-1px);}
+.btn-ink:active{transform:translate(1px,1px); box-shadow:1px 1px 0 rgba(42,38,32,.3);}
+.btn-outline{
+  border:1px solid var(--ink); background:transparent; color:var(--ink);
+  font-size:.95em; letter-spacing:.25em; padding:.6em 1.8em; border-radius:2px;
+  transition:all .2s;
+}
+.btn-outline:hover{background:var(--ink); color:var(--paper);}
+
+/* toast */
+#toast{
+  position:fixed; left:50%; bottom:34px; transform:translateX(-50%) translateY(16px);
+  background:var(--ink); color:var(--paper); font-size:.9em; letter-spacing:.12em;
+  padding:.65em 1.6em; border-radius:2px; opacity:0; pointer-events:none;
+  transition:all .35s; z-index:300; border-left:3px solid var(--cin);
+  box-shadow:0 8px 24px rgba(42,38,32,.35); max-width:88vw;
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* 淡墨转场 */
+#inkOverlay{
+  position:fixed; inset:0; z-index:400; pointer-events:none; opacity:0;
+  background:radial-gradient(circle at 50% 46%, #3a362c 0%, #16140f 52%, #0b0a07 100%);
+}
+#inkOverlay.active{animation:inkIn 1.05s cubic-bezier(.65,0,.35,1) forwards; pointer-events:auto;}
+#inkOverlay.exit{animation:inkOut .9s cubic-bezier(.4,0,.2,1) forwards;}
+@keyframes inkIn{
+  0%{opacity:0; transform:scale(.1); border-radius:50%;}
+  45%{opacity:1; transform:scale(.55); border-radius:30%;}
+  100%{opacity:1; transform:scale(1); border-radius:0;}
+}
+@keyframes inkOut{
+  0%{opacity:1;}
+  100%{opacity:0;}
+}
+
+/* ============ 封面 ============ */
+#view-cover{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:48px 20px;}
+.cover-inner{max-width:860px; width:100%; text-align:center; position:relative;}
+.cover-title{
+  writing-mode:vertical-rl; font-size:clamp(64px,11vw,116px); font-weight:900;
+  letter-spacing:.16em; line-height:1.1; display:inline-block;
+  color:var(--ink); text-shadow:3px 3px 0 rgba(42,38,32,.12);
+  margin:0 0 6px;
+}
+.cover-title-wrap{position:relative; display:inline-block;}
+.cover-title-wrap::before{
+  content:"北宋 · 元丰二年"; writing-mode:vertical-rl;
+  position:absolute; left:-34px; top:14px; font-size:.78em; letter-spacing:.5em; color:var(--ink-3);
+}
+.cover-title-wrap::after{
+  content:"苏轼"; position:absolute; right:-46px; bottom:18px; font-size:.9em; letter-spacing:.3em;
+  color:var(--cin); border:1px solid var(--cin); padding:.2em .3em; transform:rotate(6deg);
+}
+.cover-sub{font-size:clamp(13px,2vw,17px); letter-spacing:.55em; color:var(--ink-2); margin:18px 0 30px; padding-left:.55em;}
+.case-file{
+  text-align:left; max-width:640px; margin:0 auto 26px; background:rgba(233,223,198,.66);
+  border:1px solid var(--line); padding:18px 24px; border-radius:2px; position:relative;
+  box-shadow:0 10px 30px rgba(90,72,40,.10);
+}
+.case-file::before{
+  content:"卷宗"; position:absolute; top:-11px; right:22px; background:var(--cin); color:var(--paper);
+  font-size:.78em; letter-spacing:.35em; padding:.18em .7em; transform:rotate(2deg);
+}
+.case-file .row{display:flex; gap:16px; padding:4px 0; font-size:.94em;}
+.case-file .k{color:var(--ink-3); min-width:86px; letter-spacing:.2em; flex:none;}
+.case-file .v{color:var(--ink);}
+.case-file .v .tag{display:inline-block; border:1px solid var(--line-2); color:var(--ink-2); font-size:.82em; padding:0 .5em; margin:0 4px 3px 0; border-radius:2px;}
+.cover-steps{display:flex; gap:14px; justify-content:center; margin:10px auto 34px; flex-wrap:wrap; max-width:660px;}
+.step{
+  flex:1; min-width:180px; border:1px dashed var(--line-2); padding:12px 14px; background:rgba(233,223,198,.4);
+}
+.step .n{color:var(--cin); font-weight:700; letter-spacing:.2em; font-size:.92em;}
+.step .t{font-size:1em; letter-spacing:.1em; margin-top:2px;}
+.step .d{font-size:.8em; color:var(--ink-2); margin-top:4px; letter-spacing:.05em;}
+.cover-note{margin-top:26px; font-size:.8em; letter-spacing:.3em; color:var(--ink-3);}
+.cover-seal-top{display:flex; justify-content:center; gap:14px; margin-bottom:20px;}
+.cover-seal-top .stamp{font-size:.72em; letter-spacing:.3em;}
+
+/* ============ 探案板 ============ */
+.board-wrap{max-width:1180px; margin:0 auto; padding:0 20px;}
+.board-header{
+  border-bottom:2px solid var(--ink); padding:26px 0 18px; margin-bottom:22px;
+  display:flex; justify-content:space-between; align-items:flex-end; gap:18px; flex-wrap:wrap;
+}
+.board-header .bh-t{font-size:clamp(22px,3.4vw,34px); font-weight:900; letter-spacing:.22em;}
+.board-header .bh-t small{display:block; font-size:.42em; font-weight:400; letter-spacing:.42em; color:var(--ink-2); margin-top:6px;}
+.board-header .bh-no{text-align:right; font-size:.8em; color:var(--ink-2); letter-spacing:.15em; line-height:2;}
+.board-header .bh-no b{display:block; color:var(--cin); letter-spacing:.3em; font-size:1.05em;}
+
+/* 进度 */
+.progress-panel{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:8px 0 26px;
+  border:1px solid var(--line); background:rgba(233,223,198,.5); padding:14px 16px; border-radius:2px;
+}
+.pg-item .pg-label{display:flex; justify-content:space-between; font-size:.84em; letter-spacing:.15em; color:var(--ink-2); margin-bottom:6px;}
+.pg-item .pg-label b{color:var(--ink); letter-spacing:.05em;}
+.pg-track{height:10px; background:var(--paper-3); border:1px solid var(--line-2); position:relative; overflow:hidden;}
+.pg-fill{position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg,var(--ink-2),var(--ink)); transition:width .5s cubic-bezier(.65,0,.35,1);}
+.pg-item.pg-cin .pg-fill{background:linear-gradient(90deg,var(--cin-2),var(--cin));}
+.pg-item.pg-moss .pg-fill{background:linear-gradient(90deg,var(--moss),var(--moss-2));}
+
+.board-body{display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:34px; align-items:start;}
+.board-main{min-width:0;}
+
+/* 证物组 */
+.group-box{border:1px solid var(--line); background:rgba(241,233,214,.55); padding:18px 18px 22px; margin-bottom:30px; position:relative;}
+.group-box::before{
+  content:""; position:absolute; left:-1px; top:-1px; bottom:-1px; width:6px; background:var(--ink);
+}
+.group-box.g-cin::before{background:var(--cin);}
+.group-box.g-moss::before{background:var(--moss);}
+.group-head{display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;}
+.group-head .gh-seal{writing-mode:vertical-rl; letter-spacing:.35em; font-weight:700; border:1px solid var(--line-2); padding:.35em .2em; color:var(--ink-2); font-size:.85em; background:rgba(221,208,176,.4);}
+.group-head .gh-t{font-size:1.32em; font-weight:900; letter-spacing:.24em;}
+.group-head .gh-d{font-size:.8em; color:var(--ink-3); letter-spacing:.1em; flex:1;}
+.group-head .gh-count{font-size:.8em; color:var(--ink-2); letter-spacing:.12em;}
+.clue-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.clue-card{
+  position:relative; border:1px solid var(--line-2); background:var(--paper);
+  padding:15px 16px 15px 46px; border-radius:2px; cursor:pointer;
+  transition:transform .18s, box-shadow .25s, background .25s;
+  box-shadow:0 3px 8px rgba(90,72,40,.08);
+}
+.clue-card::before{ /* 图钉 */
+  content:""; position:absolute; left:16px; top:14px; width:14px; height:14px; border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, #e0917f, var(--cin) 62%, var(--cin-2));
+  box-shadow:0 2px 3px rgba(124,32,25,.45);
+}
+.clue-card::after{ /* 纸胶带 */
+  content:""; position:absolute; left:-8px; right:-8px; top:-7px; height:15px;
+  background:linear-gradient(100deg, rgba(199,178,128,.5), rgba(214,196,152,.72) 40%, rgba(199,178,128,.45));
+  transform:rotate(-.8deg); border-left:1px dashed rgba(120,98,55,.3); border-right:1px dashed rgba(120,98,55,.3);
+}
+.clue-card:nth-child(even){transform:rotate(.35deg);}
+.clue-card:nth-child(odd){transform:rotate(-.3deg);}
+.clue-card:hover{transform:translateY(-3px) rotate(0deg); box-shadow:0 10px 22px rgba(90,72,40,.18); background:#f7f1e1;}
+.clue-card .cc-no{font-size:.72em; color:var(--cin); letter-spacing:.28em; margin-bottom:3px;}
+.clue-card .cc-t{font-size:1.02em; font-weight:700; letter-spacing:.08em; margin-bottom:4px;}
+.clue-card .cc-s{font-size:.8em; color:var(--ink-2); letter-spacing:.04em; line-height:1.7;}
+.clue-card.read{opacity:.62; filter:grayscale(.5);}
+.clue-card.read .cc-no{color:var(--ink-3);}
+.clue-card.read::after{transform:rotate(1.6deg); opacity:.85;}
+.clue-card .cc-readmark{
+  position:absolute; right:10px; bottom:6px; font-size:.68em; color:var(--cin);
+  border:1px solid var(--cin); padding:0 .4em; letter-spacing:.25em; transform:rotate(-6deg);
+  opacity:0; transition:opacity .3s; background:rgba(241,233,214,.9);
+}
+.clue-card.read .cc-readmark{opacity:.9;}
+.clue-card.read .cc-s{margin-right:46px;}
+.myth-card.fixed .mc-s{margin-right:56px;}
+.person-card.visited .pn-s{margin-right:60px;}
+
+/* 误区 */
+.myth-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+.myth-card{
+  border:1px solid var(--cin-soft); background:rgba(201,106,90,.06); padding:16px; border-radius:2px;
+  cursor:pointer; position:relative; transition:all .2s;
+}
+.myth-card:hover{transform:translateY(-3px); box-shadow:0 10px 20px rgba(124,32,25,.14); background:rgba(201,106,90,.12);}
+.myth-card .mc-badge{position:absolute; top:-10px; left:12px; background:var(--cin); color:var(--paper); font-size:.72em; letter-spacing:.3em; padding:.12em .6em; transform:rotate(-3deg);}
+.myth-card .mc-t{font-size:1.05em; font-weight:700; letter-spacing:.06em; margin-bottom:6px; padding-top:7px;}
+.myth-card .mc-s{font-size:.82em; color:var(--ink-2); line-height:1.75;}
+.myth-card.fixed{border-color:var(--moss); background:rgba(76,91,73,.08);}
+.myth-card.fixed .mc-badge{background:var(--moss);}
+.myth-card.fixed .mc-s{color:var(--ink);}
+.myth-card.fixed::after{
+  content:"已纠"; position:absolute; right:10px; bottom:8px; font-size:.66em; letter-spacing:.25em;
+  color:var(--moss); border:1px solid var(--moss); padding:0 .45em; transform:rotate(-5deg);
+}
+
+/* 人物 */
+.people-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.person-card{
+  border:1px solid var(--line-2); background:var(--paper); padding:16px 14px; border-radius:2px;
+  cursor:pointer; display:flex; gap:14px; align-items:center; transition:all .2s; position:relative;
+}
+.person-card:hover{transform:translateY(-3px); box-shadow:0 10px 20px rgba(90,72,40,.16);}
+.person-card .av{
+  width:64px; height:64px; flex:none; border-radius:50%; border:1px solid var(--ink);
+  background:radial-gradient(circle at 36% 30%, #4a443a, var(--ink) 78%);
+  display:flex; align-items:center; justify-content:center; color:var(--paper);
+  font-size:1.5em; font-weight:700; letter-spacing:.1em; position:relative; overflow:hidden;
+}
+.person-card .av::after{
+  content:""; position:absolute; inset:3px; border-radius:50%; border:1px dashed rgba(241,233,214,.5);
+}
+.person-card .pn-t{font-size:1.06em; font-weight:700; letter-spacing:.12em;}
+.person-card .pn-r{font-size:.8em; color:var(--cin); letter-spacing:.06em; margin:2px 0 5px;}
+.person-card .pn-s{font-size:.78em; color:var(--ink-2); line-height:1.7; letter-spacing:.03em;}
+.person-card.visited .av{background:radial-gradient(circle at 36% 30%, #6f7f66, var(--moss) 78%);}
+.person-card.visited::after{
+  content:"已访"; position:absolute; right:9px; top:8px; font-size:.64em; color:var(--moss);
+  border:1px solid var(--moss); padding:0 .4em; letter-spacing:.2em;
+}
+
+/* 证据链 */
+.chain-box{border:1px solid var(--line); background:rgba(233,223,198,.4); padding:22px 18px 18px; margin-bottom:30px; position:relative;}
+.chain-line{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:0;}
+.chain-node{
+  display:flex; flex-direction:column; align-items:center; gap:6px; min-width:96px;
+  border:none; background:none; color:var(--ink); padding:6px 4px; position:relative;
+}
+.chain-node .cn-dot{
+  width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:var(--paper);
+  display:flex; align-items:center; justify-content:center; transition:all .2s;
+  font-size:.86em; letter-spacing:.05em;
+}
+.chain-node:hover .cn-dot{background:var(--ink); color:var(--paper); transform:scale(1.1);}
+.chain-node .cn-lb{font-size:.78em; letter-spacing:.14em; color:var(--ink-2);}
+.chain-node .cn-no{font-size:.66em; letter-spacing:.2em; color:var(--cin);}
+.chain-conn{width:44px; border-top:2px dashed var(--line-2); transform:translateY(-18px); flex:none;}
+.chain-end{color:var(--cin);}
+.chain-end .cn-dot{border-color:var(--cin); color:var(--cin);}
+.chain-end:hover .cn-dot{background:var(--cin); color:var(--paper);}
+.chain-end.locked .cn-dot{border-color:var(--ink-3); color:var(--ink-3); background:repeating-linear-gradient(45deg,var(--paper-3),var(--paper-3) 4px,var(--paper) 4px,var(--paper) 8px);}
+
+/* 时间轴 */
+.tl-box{border:1px solid var(--line); background:rgba(241,233,214,.55); padding:24px 20px 20px; margin-bottom:30px;}
+.tl{display:grid; grid-template-columns:96px 26px 1fr; gap:0 10px;}
+.tl-item{display:contents;}
+.tl-time{text-align:right; font-size:.82em; color:var(--ink-2); letter-spacing:.04em; padding:14px 0; line-height:1.6;}
+.tl-axis{justify-self:center; position:relative; padding:14px 0;}
+.tl-axis::before{
+  content:""; position:absolute; left:50%; top:0; bottom:0; width:2px; background:linear-gradient(var(--line-2),var(--line-2));
+  transform:translateX(-50%);
+}
+.tl-dot{
+  width:14px; height:14px; border-radius:50%; background:var(--paper); border:3px solid var(--ink);
+  position:relative; z-index:1; justify-self:center; margin-top:2px;
+}
+.tl-item.tl-key .tl-dot{background:var(--cin); border-color:var(--cin);}
+.tl-body{padding:12px 0 12px 6px; font-size:.92em;}
+.tl-body .tb-t{font-weight:700; letter-spacing:.06em;}
+.tl-body .tb-d{color:var(--ink-2); font-size:.82em; margin-top:2px; line-height:1.7;}
+
+/* 结局区 */
+.ending-sec{
+  border:2px solid var(--ink); background:linear-gradient(160deg, rgba(233,223,198,.8), rgba(241,233,214,.5));
+  padding:30px 26px; text-align:center; position:relative; overflow:hidden;
+}
+.ending-sec::before{
+  content:"結案卷宗"; position:absolute; top:14px; left:18px; writing-mode:vertical-rl;
+  font-size:.8em; letter-spacing:.4em; color:var(--ink-3); opacity:.7;
+}
+.ending-sec .es-stamp{
+  width:96px; height:96px; margin:0 auto 18px; border:3px solid var(--cin); color:var(--cin);
+  display:flex; align-items:center; justify-content:center; transform:rotate(-8deg);
+  font-size:1.5em; letter-spacing:.3em; border-radius:4px;
+  background:repeating-linear-gradient(45deg, rgba(157,43,34,.05), rgba(157,43,34,.05) 3px, transparent 3px, transparent 7px);
+}
+.ending-sec .es-t{font-size:1.5em; font-weight:900; letter-spacing:.3em; margin-bottom:8px;}
+.ending-sec .es-d{color:var(--ink-2); font-size:.92em; max-width:560px; margin:0 auto 20px; letter-spacing:.05em;}
+.ending-sec .es-progress{font-size:.82em; color:var(--ink-3); letter-spacing:.12em; margin-bottom:20px;}
+.ending-sec.unlocked .es-stamp{
+  animation:sealCrack .8s .2s both;
+}
+@keyframes sealCrack{
+  0%{transform:rotate(-8deg) scale(1);}
+  40%{transform:rotate(-8deg) scale(1.18); box-shadow:0 0 0 14px rgba(157,43,34,.12);}
+  70%{transform:rotate(-8deg) scale(.92);}
+  100%{transform:rotate(-8deg) scale(1); box-shadow:0 0 0 0 rgba(157,43,34,0);}
+}
+.ending-sec.unlocked .es-stamp{background:var(--cin); color:var(--paper);}
+
+/* ============ 侧栏 ============ */
+.sidebar{position:sticky; top:20px; display:flex; flex-direction:column; gap:22px;}
+.side-card{border:1px solid var(--line); background:rgba(233,223,198,.55); padding:18px 16px; border-radius:2px;}
+.side-card .sc-t{font-size:.95em; font-weight:700; letter-spacing:.3em; margin-bottom:12px; padding-bottom:8px; border-bottom:1px dashed var(--line-2); display:flex; justify-content:space-between;}
+.side-tip{font-size:.8em; color:var(--ink-2); line-height:1.9; letter-spacing:.03em;}
+.side-tip b{color:var(--cin);}
+
+/* ============ Modal ============ */
+#modal{
+  position:fixed; inset:0; z-index:250; display:flex; align-items:center; justify-content:center;
+  background:rgba(42,38,32,.55); padding:20px; backdrop-filter:blur(2px);
+}
+.modal-panel{
+  width:min(680px,100%); max-height:86vh; overflow-y:auto; background:var(--paper);
+  border:1px solid var(--ink); box-shadow:0 30px 80px rgba(20,16,10,.5); position:relative;
+  animation:modalIn .3s ease;
+}
+@keyframes modalIn{from{opacity:0; transform:translateY(18px) scale(.98);} to{opacity:1; transform:none;}}
+.modal-top{
+  background:var(--ink); color:var(--paper); display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px;
+}
+.modal-top .mt-seal{font-size:.78em; letter-spacing:.3em; color:#e3c98f; border:1px solid #e3c98f; padding:.1em .6em; transform:rotate(-2deg);}
+.modal-top .mt-close{
+  background:none; border:none; color:var(--paper); font-size:1.5em; line-height:1; padding:2px 8px;
+}
+.modal-top .mt-close:hover{color:var(--cin-soft);}
+.modal-body{padding:26px 30px 20px;}
+.modal-body h3{font-size:1.35em; font-weight:900; letter-spacing:.14em; margin-bottom:16px; position:relative; padding-bottom:10px;}
+.modal-body h3::after{content:""; position:absolute; left:0; bottom:0; width:56px; border-bottom:3px solid var(--cin);}
+.mb-sec{margin-bottom:20px;}
+.mb-sec .mb-label{
+  display:inline-block; font-size:.74em; letter-spacing:.3em; color:var(--ink-2);
+  border:1px solid var(--line-2); padding:.1em .7em; margin-bottom:8px; background:rgba(221,208,176,.35);
+}
+.ev-quote{
+  background:#f7f1e1; border-left:4px solid var(--ink); padding:16px 20px;
+  font-size:1.08em; line-height:2.1; letter-spacing:.04em; color:var(--ink);
+}
+.ev-quote .q-src{display:block; margin-top:10px; font-size:.76em; color:var(--ink-3); letter-spacing:.1em; text-align:right;}
+.mb-vern{background:rgba(76,91,73,.07); border-left:4px solid var(--moss); padding:14px 18px; font-size:.92em; color:var(--ink); line-height:2;}
+.mb-bg{font-size:.9em; color:var(--ink-2); line-height:2; letter-spacing:.03em;}
+.mb-chips{margin-top:14px;}
+.mb-chips .chip{
+  display:inline-block; font-size:.76em; color:var(--cin); border:1px solid var(--cin);
+  padding:.1em .7em; margin:0 6px 6px 0; letter-spacing:.15em; border-radius:2px;
+}
+.mb-wrong{background:rgba(157,43,34,.07); border-left:4px solid var(--cin); padding:14px 18px; font-size:.95em; line-height:2;}
+.mb-right{background:rgba(76,91,73,.08); border-left:4px solid var(--moss); padding:14px 18px; font-size:.95em; line-height:2;}
+.mb-right .mb-big{font-size:1.06em; font-weight:700; letter-spacing:.05em; margin-bottom:6px;}
+.mb-src{font-size:.78em; color:var(--ink-3); margin-top:10px; letter-spacing:.06em;}
+.mb-person{font-size:.95em; line-height:2.05;}
+.mb-person .mp-k{display:inline-block; min-width:74px; color:var(--ink-3); letter-spacing:.2em; font-size:.86em;}
+.modal-foot{display:flex; justify-content:flex-end; padding:0 30px 26px;}
+.modal-foot .btn-ink{font-size:.92em; padding:.65em 2em;}
+
+/* ============ 结局视图 ============ */
+#view-ending{min-height:100vh;}
+.ending-inner{max-width:760px; margin:0 auto; padding:0 20px;}
+.ending-head{text-align:center; padding:64px 0 30px; position:relative;}
+.ending-head .eh-seal{display:inline-block; border:2px solid var(--cin); color:var(--cin); font-size:.8em; letter-spacing:.4em; padding:.3em .9em; transform:rotate(-4deg); margin-bottom:16px; background:rgba(157,43,34,.05);}
+.ending-head h2{font-size:clamp(30px,5vw,46px); font-weight:900; letter-spacing:.3em;}
+.ending-head .eh-sub{margin-top:10px; font-size:.86em; color:var(--ink-2); letter-spacing:.35em;}
+.act-card{
+  border:1px solid var(--ink); background:var(--paper); margin:0 0 34px; position:relative;
+  box-shadow:0 14px 40px rgba(90,72,40,.14); animation:actIn .6s ease;
+}
+@keyframes actIn{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:none;}}
+.act-card .ac-head{
+  background:var(--ink); color:var(--paper); padding:12px 22px; display:flex; justify-content:space-between; align-items:center;
+}
+.act-card .ac-t{font-size:1.2em; font-weight:700; letter-spacing:.3em;}
+.act-card .ac-no{font-size:.78em; color:#e3c98f; letter-spacing:.25em; border:1px solid #e3c98f; padding:.1em .6em;}
+.act-card .ac-body{padding:26px 30px;}
+.act-quote{
+  background:#f7f1e1; border-left:4px solid var(--cin); padding:14px 20px; margin-bottom:18px;
+  font-size:1em; line-height:2.1; letter-spacing:.04em;
+}
+.act-quote .q-src{display:block; margin-top:8px; font-size:.74em; color:var(--ink-3); text-align:right; letter-spacing:.08em;}
+.act-narr{font-size:.95em; line-height:2.15; color:var(--ink); letter-spacing:.04em;}
+.act-narr b{color:var(--cin);}
+.act-next{display:block; margin:0 auto 44px;}
+.act-next.hidden{display:none;}
+
+/* 结案陈词 */
+.conclusion{
+  border:2px solid var(--ink); background:linear-gradient(165deg, #efe6cf, #e7dcc2); padding:34px 30px; margin-bottom:40px; position:relative;
+}
+.conclusion::before{
+  content:"结案"; position:absolute; top:-17px; left:50%; transform:translateX(-50%) rotate(-3deg);
+  background:var(--cin); color:var(--paper); font-size:1em; letter-spacing:.5em; padding:.25em 1em;
+}
+.conclusion h3{font-size:1.4em; font-weight:900; letter-spacing:.3em; text-align:center; margin-bottom:20px;}
+.kp-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.kp{background:rgba(241,233,214,.7); border:1px solid var(--line-2); padding:12px 14px; font-size:.86em; line-height:1.9;}
+.kp b{display:block; color:var(--cin); letter-spacing:.18em; font-size:.78em; margin-bottom:4px;}
+
+/* 复核 */
+.quiz-box{border:1px solid var(--line-2); background:rgba(233,223,198,.5); padding:26px 26px 12px; margin-bottom:40px;}
+.quiz-box h4{font-size:1.1em; font-weight:900; letter-spacing:.25em; margin-bottom:18px; display:flex; align-items:center; gap:10px;}
+.quiz-box h4::before{content:"复核"; font-size:.62em; background:var(--ink); color:var(--paper); padding:.15em .6em; letter-spacing:.3em;}
+.q-item{margin-bottom:20px;}
+.q-item .q-q{font-size:.95em; font-weight:700; margin-bottom:10px; letter-spacing:.04em;}
+.q-opts{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.q-opt{
+  text-align:left; border:1px solid var(--line-2); background:var(--paper); padding:9px 12px; font-size:.88em;
+  transition:all .18s; letter-spacing:.03em;
+}
+.q-opt:hover:not(:disabled){border-color:var(--ink); background:#f7f1e1;}
+.q-opt:disabled{cursor:default;}
+.q-opt.ok{border-color:var(--moss); background:rgba(76,91,73,.14); color:var(--moss); font-weight:700;}
+.q-opt.no{border-color:var(--cin); background:rgba(157,43,34,.1); color:var(--cin);}
+.q-opt.muted{opacity:.45;}
+.q-ex{display:none; font-size:.82em; color:var(--ink-2); margin-top:8px; line-height:1.9; letter-spacing:.03em;}
+.q-item.done .q-ex{display:block;}
+.q-item.done .q-ex.ok-c{color:var(--moss);}
+.q-item.done .q-ex.no-c{color:var(--cin);}
+.quiz-done{display:none; text-align:center; padding:16px 0 22px;}
+.quiz-done .stamp{font-size:1.1em; letter-spacing:.4em; padding:.4em 1.2em;}
+.quiz-done p{margin-top:10px; font-size:.86em; color:var(--ink-2); letter-spacing:.1em;}
+.restart-row{text-align:center; margin:10px 0 60px;}
+.back-row{text-align:left; margin-bottom:10px;}
+
+/* ============ 响应式 ============ */
+@media (max-width:980px){
+  .board-body{grid-template-columns:1fr;}
+  .sidebar{position:static;}
+}
+@media (max-width:720px){
+  .clue-grid{grid-template-columns:1fr;}
+  .myth-grid{grid-template-columns:1fr;}
+  .people-grid{grid-template-columns:1fr;}
+  .kp-grid{grid-template-columns:1fr;}
+  .q-opts{grid-template-columns:1fr;}
+  .cover-title{font-size:clamp(54px,16vw,84px);}
+  .cover-title-wrap::before{left:-20px; font-size:.66em;}
+  .cover-title-wrap::after{right:-30px; font-size:.76em;}
+  .chain-conn{width:26px;}
+  .chain-node{min-width:76px;}
+  .tl{grid-template-columns:70px 22px 1fr; gap:0 6px;}
+  .progress-panel{grid-template-columns:1fr;}
+  .board-header .bh-no{text-align:left;}
+  .modal-body{padding:20px 18px 16px;}
+  .modal-foot{padding:0 18px 20px;}
+  .act-card .ac-body{padding:20px 18px;}
+  .step .d,.cover-note,.bh-no,.sec-sub,.gh-d,.cc-s,.cc-no,.mc-s,.pn-s,.side-tip,.es-d,.es-progress,.tl-time,.tl-body .tb-d,.chain-node .cn-lb,.chain-node .cn-no,.mb-src{font-size:14px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001s !important; transition-duration:.001s !important;}
+}
+</style>
+</head>
+<body>
+<div id="inkOverlay"></div>
+<div id="app">
+
+<!-- ===== 视图：封面 ===== -->
+<section id="view-cover" class="view">
+  <div class="cover-inner">
+    <div class="cover-seal-top">
+      <span class="stamp">御史台</span>
+      <span class="stamp ghost">元丰二年</span>
+      <span class="stamp">秘卷</span>
+    </div>
+    <div class="cover-title-wrap"><h1 class="cover-title">乌台诗案</h1></div>
+    <p class="cover-sub">沉浸式探案卷宗 · 还原北宋最大文祸</p>
+    <div class="case-file">
+      <div class="row"><span class="k">案件编号</span><span class="v">元丰 · 御史台卷第七号</span></div>
+      <div class="row"><span class="k">案发时间</span><span class="v">宋神宗元丰二年（1079）</span></div>
+      <div class="row"><span class="k">案由</span><span class="v">诗文讥讪新政，下御史台狱</span></div>
+      <div class="row"><span class="k">涉案人</span><span class="v"><span class="tag">苏轼</span><span class="tag">李定</span><span class="tag">舒亶</span><span class="tag">宋神宗</span><span class="tag">苏辙</span></span></div>
+      <div class="row"><span class="k">审级</span><span class="v">御史台根勘，皇帝亲裁</span></div>
+      <div class="row"><span class="k">结果</span><span class="v">从轻发落，贬谪黄州</span></div>
+    </div>
+    <div class="cover-steps">
+      <div class="step"><div class="n">第一步</div><div class="t">探线索</div><div class="d">翻阅十二件证物，看诗文如何变成罪证</div></div>
+      <div class="step"><div class="n">第二步</div><div class="t">纠误区</div><div class="d">破除三处流传已久的讹传</div></div>
+      <div class="step"><div class="n">第三步</div><div class="t">破结局</div><div class="d">集齐线索，启封结案卷宗</div></div>
+    </div>
+    <button id="btnOpen" class="btn-ink">开卷探案</button>
+    <p class="cover-note">全程正史 · 无魔改 · 无虚构剧情 · 贴合语文课本知识点</p>
+  </div>
+</section>
+
+<!-- ===== 视图：探案板 ===== -->
+<section id="view-board" class="view hidden">
+  <div class="board-wrap">
+    <header class="board-header">
+      <div class="bh-t">乌台诗案<small>探案卷宗 · 证据墙</small></div>
+      <div class="bh-no">
+        <b>御史台呈 · 密</b>
+        元丰二年七月至十二月 · 根勘苏轼案
+      </div>
+    </header>
+
+    <div class="progress-panel" id="progressPanel"></div>
+
+    <div class="board-body">
+      <div class="board-main">
+        <div id="groups"></div>
+        <div class="sec-head"><span class="sec-t">流言辨伪</span><span class="sec-sub">三处讹传，一一点破</span></div>
+        <div id="myths"></div>
+        <div class="sec-head"><span class="sec-t">证据链</span><span class="sec-sub">从诗文到贬谪，一条线走完此案</span></div>
+        <div class="chain-box" id="chain"></div>
+        <div class="sec-head"><span class="sec-t">案发时序</span><span class="sec-sub">元丰二年，这一年发生了什么</span></div>
+        <div class="tl-box"><div class="tl" id="timeline"></div></div>
+        <div class="sec-head"><span class="sec-t">终章</span><span class="sec-sub">结局卷宗，等待启封</span></div>
+        <div class="ending-sec" id="endingSec"></div>
+      </div>
+      <aside class="sidebar">
+        <div class="side-card">
+          <div class="sc-t">探案进度</div>
+          <div id="sideProgress"></div>
+        </div>
+        <div class="side-card">
+          <div class="sc-t">人物档案</div>
+          <div class="people-grid" id="people"></div>
+        </div>
+        <div class="side-card">
+          <div class="sc-t">探案手记</div>
+          <div class="side-tip">
+            · 点击证物卡，弹出<b>原文 + 白话解析 + 历史背景</b>；<br>
+            · 集齐 <b>12 件证物</b>、纠正 <b>3 处误区</b>，结局封印自动解除；<br>
+            · 人物档案可随时翻阅，与解锁无关，但建议先读，可帮助理解证词。
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 视图：结局 ===== -->
+<section id="view-ending" class="view hidden">
+  <div class="ending-inner">
+    <div class="back-row"><button class="btn-outline" id="btnBackBoard">← 返回探案板</button></div>
+    <div class="ending-head">
+      <span class="eh-seal">御史台 · 结案</span>
+      <h2>乌台诗案</h2>
+      <p class="eh-sub">元丰二年十二月庚申 · 结案卷宗启封</p>
+    </div>
+    <div id="acts"></div>
+    <div id="conclusion"></div>
+    <div id="quiz"></div>
+    <div class="restart-row"><button class="btn-ink" id="btnRestart">重探此案</button></div>
+  </div>
+</section>
+
+</div>
+
+<!-- ===== 通用弹窗 ===== -->
+<div id="modal" class="hidden">
+  <div class="modal-panel">
+    <div class="modal-top">
+      <span class="mt-seal" id="modalSeal">证物</span>
+      <button class="mt-close" id="modalClose" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot"><button class="btn-ink" id="modalAck">已阅此证，收下</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   乌台诗案 · 沉浸式探案卷宗 —— 交互逻辑
+   ============================================================ */
+
+/* ---------- 史料数据 ---------- */
+const GROUPS = [
+  {
+    key:'yulun', name:'舆论线索', seal:'舆', gclass:'',
+    desc:'苏轼诗文中的“讽喻新政”节选——这些诗句后来都成了罪证',
+    clues:[
+      {id:'y1', no:'甲一', title:'《湖州谢上表》· 谢表自嘲',
+       tease:'一句“难以追陪新进”，成了整桩案子的导火索',
+       quote:['知其愚不适时，难以追陪新进；','察其老不生事，或能牧养小民。'],
+       src:'苏轼《湖州谢上表》（元丰二年四月）',
+       vern:'我知道自己愚钝、不合时宜，难以追随朝中的“新进”官员；体察我年老、不会惹事，或许还能牧养一方小民。',
+       bg:'元丰二年四月，苏轼由徐州移知湖州，按例上表谢恩。表中“新进”二字，恰是时人对变法派新贵官员的称呼，被御史何正臣一眼抓住。何正臣上疏，指其讥讽朝廷、怨望君上，请求惩治——一纸谢表，就此点燃导火索。',
+       chips:['何正臣','宋神宗']},
+      {id:'y2', no:'甲二', title:'《山村五绝·其三》· 三月无盐',
+       tease:'七十老翁吃不上盐，诗里藏的是对盐法的隐刺',
+       quote:['老翁七十自腰镰，惭愧春山笋蕨甜。','岂是闻韶解忘味，迩来三月食无盐。'],
+       src:'苏轼《山村五绝·其三》',
+       vern:'七十岁的老翁亲自带镰刀上山，惭愧这春山的笋和蕨也算甘甜；哪里是像孔子听了韶乐忘了肉味——实在是近来三个月家里没盐吃。',
+       bg:'王安石变法推行榷盐等法，民间购盐不便。舒亶在弹劾奏章中把此诗与“盐禁”一一对照：“陛下谨盐禁，则曰‘岂是闻韶解忘味，迩来三月食无盐’”，坐实其讥讪新政。',
+       chips:['舒亶','盐法']},
+      {id:'y3', no:'甲三', title:'《山村五绝·其四》· 儿童城里话',
+       tease:'农家孩子满口城里话——青苗钱把农民牵进了城',
+       quote:['杖藜裹饭去匆匆，过眼青钱转手空。','赢得儿童语音好，一年强半在城中。'],
+       src:'苏轼《山村五绝·其四》',
+       vern:'拄着藜杖、包着干粮匆匆去领青苗钱，到手的铜钱转手就花空；只学得孩子们一口城里话——一年大半时间都泡在城里。',
+       bg:'苏轼的供状亲口承认，此诗意在“讥讽朝廷，新法青苗、助役不便”：百姓虽得青苗钱，多在城中浮费；乡村人家一年两度夏秋税，又数次缴纳和预买钱，再加青苗、助役钱，子弟只得久住城中做工，只学得一口城里话。舒亶将之与青苗法直接挂钩。',
+       chips:['舒亶','青苗法','苏轼供状']},
+      {id:'y4', no:'甲四', title:'《双桧》· 地底蛰龙',
+       tease:'一句“蛰龙”，差点被宰相栽成“不臣”',
+       quote:['凛然相对敢相欺，直干凌空未要奇。','根到九泉无曲处，世间惟有蛰龙知。'],
+       src:'苏轼《王复秀才所居双桧二首·其二》',
+       vern:'两株桧树凛然相对，谁也不敢欺它；树干笔直凌空，并不求奇。树根扎到九泉之下也不弯曲，这世间只有蛰伏的龙知道。',
+       bg:'宰相王珪向神宗告发：“陛下飞龙在天，苏轼以为陛下不知道他，却去求地下的蛰龙——这不是不臣之心吗？”神宗冷冷答道：“诗人之词，安可如此论？彼自咏桧，何预朕事！”章惇亦为苏轼辩解：“龙并非只有人君可用，人臣亦可言龙。”一场最险的构陷，被神宗挡了回去。',
+       chips:['王珪','宋神宗','章惇']}
+    ]
+  },
+  {
+    key:'chaotang', name:'朝堂线索', seal:'朝', gclass:'g-cin',
+    desc:'御史台三连弹章，与新旧党争的棋盘',
+    clues:[
+      {id:'c1', no:'乙一', title:'第一支箭 · 何正臣上疏',
+       tease:'御史台的第一封弹章，矛头直指谢表',
+       quote:['物证：知其愚不适时，难以追陪新进；','察其老不生事，或能牧养小民。'],
+       src:'苏轼《湖州谢上表》节句；何正臣劾疏（节意）',
+       vern:'何正臣把谢表中的自谦之语断为讥刺：苏轼自恃才名、藐视朝廷，请求神宗追究治罪。',
+       bg:'元丰二年七月，御史何正臣最先发难，引谢表上奏，斥其“妄自尊大、愚弄朝廷”。此后御史台接连上章，步步收紧，神宗遂命御史台根勘。这是“乌台诗案”在朝堂上的第一声惊雷。',
+       chips:['何正臣','湖州谢上表']},
+      {id:'c2', no:'乙二', title:'第二支箭 · 舒亶四句对照',
+       tease:'把诗句与新法逐条对号入座，一份“按图索骥”的弹章',
+       quote:['盖陛下发钱以本业贫民，则曰“赢得儿童语音好，一年强半在城中”；','陛下明法以课试郡吏，则曰“读书万卷不读律，致君尧舜知无术”；','陛下兴水利，则曰“东海若知明主意，应教斥卤变桑田”；','陛下谨盐禁，则曰“岂是闻韶解忘味，迩来三月食无盐”。'],
+       src:'舒亶劾疏（节录）',
+       vern:'陛下推行青苗钱扶助贫民，苏轼就说“赢得儿童语音好”；陛下明法考核官吏，他就说“读书万卷不读律”；陛下兴修水利，他就说“东海若知明主意”；陛下整顿盐禁，他就说“迩来三月食无盐”。',
+       bg:'元丰二年七月二日，监察御史里行舒亶据新刊印的《元丰续添苏子瞻学士钱塘集》，将苏轼诗句与各项新政逐条对照上奏，称其“包藏祸心，怨望其上，讪渎谩骂”。这份弹章把“诗文”正式变成了“罪证”。',
+       chips:['舒亶','钱塘集']},
+      {id:'c3', no:'乙三', title:'第三支箭 · 李定“四可废之罪”',
+       tease:'御史中丞亲自出马，罗列罪状，力主重惩',
+       quote:['（节意）李定奏：苏轼讪上骂下，无所忌惮；','其可废之罪有四，请付有司根治。'],
+       src:'《宋史》等所载李定论苏轼疏（节意）',
+       vern:'御史中丞李定上奏，罗列苏轼四条“可废之罪”，称其讪谤君上、怨望朝廷，请求从严根究。',
+       bg:'李定时任御史中丞，主持根勘所审理此案。他与舒亶等力主将苏轼置之于法，甚至主张处死。此后朝中“欲杀之”与“欲救之”两股力量相持不下，案子一拖就是四个多月。',
+       chips:['李定','御史台']},
+      {id:'c4', no:'乙四', title:'党争棋盘 · 为什么偏偏是诗',
+       tease:'御史台要的从来不只是诗，而是一个把柄',
+       quote:['陛下求治太急，听言太广，进人太锐。'],
+       src:'苏轼《上神宗皇帝书》（熙宁二年）',
+       vern:'苏轼劝神宗：求治之心太急切，听取意见的渠道太广，提拔官员的速度太锐进——委婉批评王安石变法推进过猛。',
+       bg:'熙宁二年王安石变法，苏轼接连上书反对，后自请外任，辗转杭州、密州、徐州、湖州。元丰年间新党当政、旧党被逐，御史台成为打击政敌的利器。苏轼诗文流传极广，恰恰成了最好的把柄。诗案看似因诗而起，实为党争之果。',
+       chips:['王安石','新旧党争','宋神宗']}
+    ]
+  },
+  {
+    key:'anjian', name:'案件线索', seal:'案', gclass:'g-moss',
+    desc:'被捕、审讯、狱中——案发四个月的全过程',
+    clues:[
+      {id:'x1', no:'丙一', title:'七月廿八 · 湖州缇骑',
+       tease:'上任三个月，缇骑突然出现在湖州官署',
+       quote:['（史事节意）元丰二年七月二十八日，太常博士皇甫遵奉诏至湖州，勾摄苏轼。'],
+       src:'《续资治通鉴长编》系事（节意）',
+       vern:'元丰二年七月二十八日，朝廷派太常博士皇甫遵赶到湖州，逮捕苏轼。那时他上任湖州知州才三个月。',
+       bg:'案发前，驸马都尉王诜已向苏辙透露风声，苏辙急遣人驰告湖州；苏轼得报却未及应对，缇骑已至。押解途中，州郡望风，派吏卒围船搜查文书，家人老幼几乎吓死。八月，苏轼被解抵京师。',
+       chips:['皇甫遵','王诜','苏辙']},
+      {id:'x2', no:'丙二', title:'八月十八 · 下乌台狱',
+       tease:'御史台里关了一百三十天',
+       quote:['柏台霜气夜凄凄，风动琅珰月向低。'],
+       src:'苏轼《狱中寄子由·其二》——“柏台”即御史台',
+       vern:'御史台的霜气在夜里凄冷透骨，风吹动狱中锁链的琅珰声，月亮低垂。',
+       bg:'元丰二年八月十八日，苏轼被押入御史台狱，一关一百三十天。朝廷下令，凡他历任之地皆搜缴诗文送审；受牵连者数十人，张方平、范镇、司马光、黄庭坚等皆因收藏、传抄其诗文被罚铜。狱中刑讯逼供，“诟辱通宵不忍闻”。',
+       chips:['御史台','受牵连诸臣']},
+      {id:'x3', no:'丙三', title:'提审与供状',
+       tease:'一百三十天的审讯，留下今人可读的完整供词',
+       quote:['意言百姓虽得青苗钱，立便于城中浮费使却。','又言乡村之人，一年两度夏秋税，又数度请纳和预买钱，','今此更添青苗、助役钱，因此庄家子弟多在城中，','不着次第，但学得城中语音而已。以讥讽朝廷，新法青苗、助役不便。'],
+       src:'苏轼供状（中国国家图书馆藏《乌台诗案》明重编本）',
+       vern:'苏轼供称：这句诗是说百姓虽领到青苗钱，转眼就在城里花掉；乡村人家一年要纳夏秋两税，又数次缴纳和预买钱，如今再加青苗、助役钱，子弟只得久住城中，只学得一口城里话——意在讥讽朝廷新法不便。',
+       bg:'八月二十日起，御史台开始提审。苏轼起初“隐晦不说情实”，受刑后逐步招供，御史台将其供词与诗文汇成案卷，即后世所传《乌台诗案》。这份供状至今仍见于文献著录，是研究此案的第一手材料。',
+       chips:['御史台','乌台诗案卷']},
+      {id:'x4', no:'丙四', title:'狱中绝命诗',
+       tease:'他以为必死，写下给弟弟的绝命诗',
+       quote:['圣主如天万物春，小臣愚暗自亡身。','百年未满先偿债，十口无归更累人。','是处青山可埋骨，他年夜雨独伤神。','与君世世为兄弟，更结来生未了因。'],
+       src:'苏轼《狱中寄子由·其一》',
+       vern:'圣明的君主如天一般使万物逢春，是我这个愚暗的小臣自寻死路；年寿未满先偿了命债，一家十口无依无靠更拖累亲人。随处青山都可埋骨，只恐他年夜雨，你独自伤神。与你生生世世做兄弟，来生再续未了之缘。',
+       bg:'狱中苏轼自度必死，写下《狱中寄子由》二首托付后事。“与君世世为兄弟”句传至宫中，神宗读后亦为动容。与此同时，御史台内外“欲杀”与“欲救”两股力量激烈交锋，苏轼命悬一线。',
+       chips:['苏辙','宋神宗']}
+    ]
+  }
+];
+
+const MYTHS = [
+  {id:'m1', t:'误区一 · 单纯文字狱？',
+   s:'常听说：乌台诗案就是一起“文字狱”，写诗讽刺朝廷，所以被抓。',
+   wrong:'讹传：乌台诗案只是一场因诗获罪的文字狱，苏轼写诗讽刺新政，所以被下狱。',
+   right:'正史纠正：不完全是。诗案表面是“因诗获罪”，实质是王安石变法以来的新旧党争——御史台（新党阵地）借苏轼诗文中批评新政的句子罗织罪名，目的是打击反对变法的士大夫群体。诗只是导火索与把柄，党争才是根源。准确的说法是：一场借文字展开的政治斗争。',
+   src:'史据：《宋史》及《续资治通鉴长编》所载弹章，均将诗句与新政逐条对照——矛头所向是“反新法”的言论，而非单纯文辞。'},
+  {id:'m2', t:'误区二 · 王安石害他？',
+   s:'常听说：王安石推行新法，苏轼反对，所以是王安石直接陷害苏轼。',
+   wrong:'讹传：乌台诗案是王安石指使人构陷苏轼，他是幕后主使。',
+   right:'正史纠正：并非如此。乌台诗案发生于元丰二年（1079），王安石已于熙宁九年（1076）罢相，退居江宁，不在朝中。真正罗织罪名的是御史台官员何正臣、舒亶、李定，以及欲借“蛰龙”诗置苏轼于死地的宰相王珪。王安石与苏轼政见相左，却彼此欣赏才学；据载，王安石闻讯曾叹：“安有圣世而杀才士者乎？”——他反而是营救苏轼的力量之一。',
+   src:'史据：王安石罢相时间见《宋史·神宗纪》；“安有圣世而杀才士者乎”见宋人笔记及《续资治通鉴长编》所引，学界多采信。'},
+  {id:'m3', t:'误区三 · 立刻去黄州做官？',
+   s:'常听说：苏轼被贬之后，立刻就去黄州上任做官了。',
+   wrong:'讹传：苏轼被判贬官，随即赴黄州上任，像正常调任一样。',
+   right:'正史纠正：三处都需修正。其一，从被捕到宣判隔了近半年：七月被捕、八月入狱，十二月二十九日才下诏结案，除夕方获释。其二，他贬的不是“官”：诏书是“责授检校水部员外郎、黄州团练副使、本州安置、不得签书公事”——一个不准离开当地、不准签办公文的虚职，本质是罪臣安置。其三，他并非“立刻去”：元丰三年正月初一启程，二月一日才抵达黄州，此后一待四年多，垦荒东坡、自号“东坡居士”，写下《定风波》《赤壁赋》《念奴娇·赤壁怀古》——乌台诗案毁了他的仕途，却成就了文学上的“苏东坡”。',
+   src:'史据：结案诏书见《续资治通鉴长编》元丰二年十二月庚申条；黄州行迹见苏轼年谱。'}
+];
+
+const PEOPLE = [
+  {id:'su', face:'苏', name:'苏轼', role:'涉案主角 · 御史台狱囚',
+   stance:'屡次上书反对王安石激进变法，自请外任，辗转杭州、密州、徐州、湖州。',
+   act:'因诗文“讥讪新政”被何正臣、舒亶、李定等弹劾下狱，险死还生，是本案唯一的核心当事人。',
+   after:'贬黄州团练副使四年余，后量移汝州；哲宗朝一度回朝任翰林学士，旋又迭遭贬谪，远至海南儋州。元符三年（1100）遇赦北归，次年卒于常州。'},
+  {id:'li', face:'李', name:'李定', role:'御史中丞 · 主审',
+   stance:'变法派（新党），神宗信用之臣，时任御史中丞，主持根勘所。',
+   act:'上疏罗列苏轼四条“可废之罪”，力主严惩，是案中主审与“欲杀”一派的核心人物。',
+   after:'元丰末以罪责授，元祐年间再遭论列，仕途以罪终（见《宋史·李定传》）。'},
+  {id:'shu', face:'舒', name:'舒亶', role:'监察御史里行 · 发难者',
+   stance:'变法派（新党），以敢言刻核著称，时任监察御史里行。',
+   act:'据《元丰续添苏子瞻学士钱塘集》，将苏轼诗句与新政逐条对照上奏，罗织罪证最力，并反对大理寺从轻拟判。',
+   after:'诗案后曾得神宗信用，后因他事亦遭贬黜（见《宋史·舒亶传》）。'},
+  {id:'sz', face:'神', name:'宋神宗', role:'皇帝 · 终审裁决',
+   stance:'王安石变法的支持者与主持者；对苏轼有惜才之意，却受御史台舆论牵制。',
+   act:'驳回王珪“蛰龙”诬告（“彼自咏桧，何预朕事”），否决处死之议，最终从轻发落，贬苏轼至黄州。',
+   after:'元丰八年（1085）神宗崩，哲宗即位，宣仁太后听政、起复旧党，苏轼得以北归。'}
+];
+
+const ACTS = [
+  {no:'第一幕', t:'太后求情',
+   quote:['昔仁宗策贤良归，喜甚，曰：“吾为子孙得两宰相。”','……今轼以作诗系狱，得非仇人中伤之乎？诗语之过，岂至于此！'],
+   src:'太皇太后曹氏语意（见《续资治通鉴长编》等所载）',
+   narr:'元丰二年秋，太皇太后曹氏病笃。她召神宗至榻前，提起三十年前仁宗策试苏轼、苏辙兄弟后那句“吾为子孙得两宰相”的欢喜，劝道：苏轼因诗下狱，怕是仇人中伤；我已病重，不愿再见冤狱，伤了天地中和之气。神宗欲大赦天下，太后说：“只赦苏轼一人，就够了。”<br><b>十月，曹太后薨；两个月后，苏轼得轻判。</b>'},
+  {no:'第二幕', t:'百官保举',
+   quote:['自古大度之君，不以言语罪人。'],
+   src:'王安礼进言宋神宗',
+   narr:'苏辙上书，愿纳还自身官职为兄赎罪；翰林学士王安礼劝神宗“不以言语罪人”；退居江宁的王安石闻讯，亦叹“安有圣世而杀才士者乎”；张方平、范镇、司马光等纷纷上书营救——<b>后来这批人大多因“收藏苏轼诗文”被罚铜，却终究把苏轼从鬼门关拉了回来。</b>'},
+  {no:'第三幕', t:'从轻发落',
+   quote:['责授苏轼检校水部员外郎、黄州团练副使、','本州安置，不得签书公事。'],
+   src:'元丰二年十二月庚申（二十九日）诏',
+   narr:'御史台审结，李定、舒亶等力请处死；大理寺初判“徒二年”，遇赦可免，舒亶又上奏反对。神宗最终拍板：<b>不杀。</b>十二月二十九日下诏，苏轼以“黄州团练副使、本州安置、不得签书公事”结案。除夕，苏轼出狱——北宋第一才子，从此踏上贬谪之路。'},
+  {no:'第四幕', t:'贬谪黄州',
+   quote:['莫听穿林打叶声，何妨吟啸且徐行。','竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。'],
+   src:'苏轼《定风波》（黄州作）',
+   narr:'元丰三年正月初一，苏轼启程南下，二月一日抵黄州。名义上是“团练副使”，实则受监管、无职事。他在城东荒坡垦田躬耕，自号“东坡居士”；赤壁之下，写下《念奴娇·赤壁怀古》与前、后《赤壁赋》；风雨之中，唱出“一蓑烟雨任平生”。<br><b>乌台诗案摧毁了他的仕途，也逼出了千古一人的“苏东坡”。</b><br>元丰七年（1084），神宗手诏：“黜居思咎，阅岁滋深，人材实难，不忍终弃。”苏轼量移汝州，黄州四年多的贬居生活至此结束。'}
+];
+
+const KPS = [
+  {k:'何为“乌台”', v:'御史台。汉代御史台官署植柏树，乌鹊栖集，故称“乌台”，亦称“柏台”。'},
+  {k:'案发时间', v:'宋神宗元丰二年（1079），苏轼时在湖州知州任上。'},
+  {k:'案件性质', v:'新旧党争中，御史台借诗文罗织罪名，打击反对变法的士大夫。'},
+  {k:'判决结果', v:'贬黄州团练副使，本州安置，不得签书公事。'},
+  {k:'历史影响', v:'苏轼人生最大转折；黄州四年多成就其文学巅峰，遂有“东坡居士”。'}
+];
+
+const QUIZ = [
+  {q:'“乌台”指的是哪个机构？', opts:[
+    {k:'A', t:'御史台', ok:true},{k:'B', t:'大理寺', ok:false},
+    {k:'C', t:'开封府', ok:false},{k:'D', t:'枢密院', ok:false}],
+   ex:'御史台专司纠弹百官，官署植柏树、乌鹊栖集，故称“乌台”“柏台”。'},
+  {q:'舒亶弹劾苏轼，主要依据哪部诗文集？', opts:[
+    {k:'A', t:'《东坡集》', ok:false},{k:'B', t:'《元丰续添苏子瞻学士钱塘集》', ok:true},
+    {k:'C', t:'《南行集》', ok:false},{k:'D', t:'《赤壁赋》', ok:false}],
+   ex:'元丰二年新刊的《钱塘集》收录苏轼杭州、徐州等地诗作，舒亶据以逐句对照新政弹劾。'},
+  {q:'苏轼被贬黄州的完整身份是？', opts:[
+    {k:'A', t:'黄州知州', ok:false},
+    {k:'B', t:'黄州团练副使，本州安置，不得签书公事', ok:true},
+    {k:'C', t:'黄州通判', ok:false},{k:'D', t:'黄州监盐税', ok:false}],
+   ex:'诏书为“责授检校水部员外郎、黄州团练副使、本州安置、不得签书公事”——虚职、限居、无职事。'}
+];
+
+const TIMELINE = [
+  {t:'熙宁二年（1069）', title:'王安石变法', d:'苏轼上《上神宗皇帝书》等，反对新法过急。', key:false},
+  {t:'熙宁四年（1071）', title:'苏轼自请外任', d:'通判杭州；此后历任密州、徐州。', key:false},
+  {t:'元丰二年·春（1079）', title:'移知湖州', d:'四月到任，上《湖州谢上表》。', key:false},
+  {t:'七月·初二', title:'舒亶上弹章', d:'据《钱塘集》将诗句与新政逐条对照。', key:false},
+  {t:'七月·二十八', title:'湖州被捕', d:'皇甫遵奉诏至湖州逮捕苏轼。', key:true},
+  {t:'八月·十八', title:'押入御史台狱', d:'即“乌台”，关押约一百三十天。', key:true},
+  {t:'八月·二十', title:'提审开始', d:'刑讯逼供，逐诗问供，录成《乌台诗案》卷。', key:false},
+  {t:'十月·二十', title:'太皇太后曹氏薨', d:'病中曾为苏轼求情。', key:false},
+  {t:'十二月·庚申（二十九日）', title:'诏责授黄州', d:'除夕获释出狱。', key:true},
+  {t:'元丰三年·正月初一（1080）', title:'启程赴黄州', d:'二月一日抵达贬所。', key:false},
+  {t:'1080—1084', title:'黄州贬居四年余', d:'垦东坡、号“东坡居士”；作《定风波》《赤壁赋》《念奴娇·赤壁怀古》。', key:false},
+  {t:'元丰七年（1084）', title:'量移汝州', d:'神宗手诏：“人材实难，不忍终弃。”', key:false}
+];
+
+const CHAIN = [
+  {lb:'诗文', no:'甲·诗', target:'y2'},
+  {lb:'弹劾', no:'乙·奏', target:'c2'},
+  {lb:'逮捕', no:'丙一', target:'x1'},
+  {lb:'下狱', no:'丙二', target:'x2'},
+  {lb:'审讯', no:'丙三', target:'x3'},
+  {lb:'贬黄州', no:'终章', target:'end'}
+];
+
+/* ---------- 状态 ---------- */
+const STORE_KEY = 'wutaiProbe2026';
+const state = {
+  clues: [], myths: [], people: [], done: false
+};
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ const s = JSON.parse(raw); state.clues = s.clues||[]; state.myths = s.myths||[]; state.people = s.people||[]; state.done = !!s.done; }
+  }catch(e){}
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+const TOTAL_CLUES = GROUPS.reduce((n,g)=>n+g.clues.length,0);
+const TOTAL_MYTHS = MYTHS.length;
+const TOTAL_PEOPLE = PEOPLE.length;
+const isUnlocked = () => state.clues.length >= TOTAL_CLUES && state.myths.length >= TOTAL_MYTHS;
+
+/* ---------- 工具 ---------- */
+const $ = id => document.getElementById(id);
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function inkTo(cb){
+  const o = $('inkOverlay');
+  o.classList.remove('active','exit'); void o.offsetWidth;
+  o.classList.add('active');
+  setTimeout(()=>{ cb(); o.classList.remove('active'); o.classList.add('exit'); setTimeout(()=>o.classList.remove('exit'), 950); }, 1000);
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- 弹窗 ---------- */
+let ackHandler = null;
+function openModal(seal, bodyHtml, ackText, onAck){
+  $('modalSeal').textContent = seal;
+  $('modalBody').innerHTML = bodyHtml;
+  const btn = $('modalAck'); btn.textContent = ackText || '已阅，收下';
+  ackHandler = onAck || null;
+  $('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  $('modal').classList.add('hidden');
+  ackHandler = null;
+  document.body.style.overflow = '';
+}
+$('modalClose').addEventListener('click', closeModal);
+$('modalAck').addEventListener('click', ()=>{
+  const h = ackHandler; closeModal(); if(h) h();
+});
+$('modal').addEventListener('click', e=>{ if(e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && !$('modal').classList.contains('hidden')) closeModal(); });
+
+/* 弹窗内“相关人物”标签可点击 → 人物档案 */
+$('modalBody').addEventListener('click', e=>{
+  const chip = e.target.closest('[data-person]');
+  if(!chip) return;
+  openPerson(chip.getAttribute('data-person'));
+});
+
+/* ---------- 渲染：探案板 ---------- */
+function clueBody(c){
+  return `
+    <h3>${c.title}</h3>
+    <div class="mb-sec"><span class="mb-label">证物原文</span>
+      <div class="ev-quote">${c.quote.map(q=>esc(q)+'<br>').join('')}<span class="q-src">—— ${esc(c.src)}</span></div>
+    </div>
+    <div class="mb-sec"><span class="mb-label">白话解析</span>
+      <div class="mb-vern">${esc(c.vern)}</div>
+    </div>
+    <div class="mb-sec"><span class="mb-label">历史背景</span>
+      <div class="mb-bg">${esc(c.bg)}</div>
+    </div>
+    <div class="mb-chips">${(c.chips||[]).map(p=>`<span class="chip" data-person="${p}">${p}</span>`).join('')}</div>`;
+}
+function openClue(id){
+  let c = null;
+  GROUPS.forEach(g=>{ g.clues.forEach(x=>{ if(x.id===id) c=x; }); });
+  if(!c) return;
+  const read = state.clues.includes(id);
+  openModal(`证物 · ${c.no}`, clueBody(c), read ? '收下此证' : '已阅此证，收下', ()=>{
+    if(!state.clues.includes(id)){ state.clues.push(id); saveState(); renderAll(); toast('证物已收录 · 探案进度更新'); }
+  });
+}
+function renderGroups(){
+  $('groups').innerHTML = GROUPS.map(g=>`
+    <div class="group-box ${g.gclass}">
+      <div class="group-head">
+        <span class="gh-seal">${g.seal}</span>
+        <span class="gh-t">${g.name}</span>
+        <span class="gh-d">${g.desc}</span>
+        <span class="gh-count">${g.clues.filter(c=>state.clues.includes(c.id)).length} / ${g.clues.length} 已阅</span>
+      </div>
+      <div class="clue-grid">
+        ${g.clues.map(c=>`
+          <div class="clue-card ${state.clues.includes(c.id)?'read':''}" data-clue="${c.id}">
+            <span class="cc-no">证物 ${c.no}</span>
+            <div class="cc-t">${c.title}</div>
+            <div class="cc-s">${c.tease}</div>
+            <span class="cc-readmark">已阅</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+$('groups').addEventListener('click', e=>{
+  const card = e.target.closest('[data-clue]');
+  if(card) openClue(card.getAttribute('data-clue'));
+});
+
+function mythBody(m){
+  return `
+    <h3>${m.t}</h3>
+    <div class="mb-sec"><span class="mb-label" style="color:var(--cin);border-color:var(--cin);">讹传</span>
+      <div class="mb-wrong">${esc(m.wrong)}</div>
+    </div>
+    <div class="mb-sec"><span class="mb-label" style="color:var(--moss);border-color:var(--moss);">正史纠正</span>
+      <div class="mb-right">${esc(m.right)}</div>
+    </div>
+    <div class="mb-src">${esc(m.src)}</div>`;
+}
+function renderMyths(){
+  $('myths').innerHTML = MYTHS.map(m=>`
+    <div class="myth-card ${state.myths.includes(m.id)?'fixed':''}" data-myth="${m.id}">
+      <span class="mc-badge">讹传</span>
+      <div class="mc-t">${m.t}</div>
+      <div class="mc-s">${m.s}</div>
+    </div>`).join('');
+}
+$('myths').addEventListener('click', e=>{
+  const card = e.target.closest('[data-myth]');
+  if(!card) return;
+  const m = MYTHS.find(x=>x.id===card.getAttribute('data-myth'));
+  openModal('纠误 · 正史', mythBody(m), '明白，收下', ()=>{
+    if(!state.myths.includes(m.id)){ state.myths.push(m.id); saveState(); renderAll(); toast('讹传已纠 · 正史已录'); }
+  });
+});
+
+function personBody(p){
+  return `
+    <h3>${p.name} <span style="font-size:.55em;letter-spacing:.3em;color:var(--cin);font-weight:400;">${p.role}</span></h3>
+    <div class="mb-sec"><span class="mb-label">人物立场</span><div class="mb-person"><span class="mp-k">立场</span>${esc(p.stance)}</div></div>
+    <div class="mb-sec"><span class="mb-label">案中作用</span><div class="mb-person"><span class="mp-k">作用</span>${esc(p.act)}</div></div>
+    <div class="mb-sec"><span class="mb-label">后续命运</span><div class="mb-person"><span class="mp-k">后续</span>${esc(p.after)}</div></div>`;
+}
+function openPerson(id){
+  const p = PEOPLE.find(x=>x.id===id); if(!p) return;
+  openModal('人物卷宗', personBody(p), '已阅，归卷', ()=>{
+    if(!state.people.includes(p.id)){ state.people.push(p.id); saveState(); renderAll(); }
+  });
+}
+function renderPeople(){
+  $('people').innerHTML = PEOPLE.map(p=>`
+    <div class="person-card ${state.people.includes(p.id)?'visited':''}" data-person="${p.id}">
+      <div class="av">${p.face}</div>
+      <div>
+        <div class="pn-t">${p.name}</div>
+        <div class="pn-r">${p.role}</div>
+        <div class="pn-s">${p.stance}</div>
+      </div>
+    </div>`).join('');
+}
+$('people').addEventListener('click', e=>{
+  const card = e.target.closest('[data-person]');
+  if(card) openPerson(card.getAttribute('data-person'));
+});
+
+function renderChain(){
+  const unlocked = isUnlocked();
+  $('chain').innerHTML = `
+    <div class="chain-line">
+      ${CHAIN.map((n,i)=>{
+        const last = i===CHAIN.length-1;
+        const cls = last ? (unlocked ? 'chain-end' : 'chain-end locked') : '';
+        const inner = `<div class="chain-node ${cls}" data-chain="${n.target}">
+          <span class="cn-no">${n.no}</span>
+          <span class="cn-dot">${n.lb}</span>
+          <span class="cn-lb">${n.lb}</span></div>`;
+        return inner + (last ? '' : '<span class="chain-conn"></span>');
+      }).join('')}
+    </div>`;
+}
+$('chain').addEventListener('click', e=>{
+  const node = e.target.closest('[data-chain]');
+  if(!node) return;
+  const t = node.getAttribute('data-chain');
+  if(t === 'end'){
+    if(isUnlocked()) go('ending');
+    else toast('终章未启封：先集齐 12 件证物、纠正 3 处误区');
+  }else openClue(t);
+});
+
+function renderTimeline(){
+  $('timeline').innerHTML = TIMELINE.map(t=>`
+    <div class="tl-item ${t.key?'tl-key':''}">
+      <div class="tl-time">${t.t}</div>
+      <div class="tl-axis"><span class="tl-dot"></span></div>
+      <div class="tl-body"><div class="tb-t">${t.title}</div><div class="tb-d">${t.d}</div></div>
+    </div>`).join('');
+}
+
+function renderEndingSec(){
+  const sec = $('endingSec');
+  const unlocked = isUnlocked();
+  const pct = Math.round(((state.clues.length + state.myths.length) / (TOTAL_CLUES + TOTAL_MYTHS)) * 100);
+  sec.classList.toggle('unlocked', unlocked);
+  if(unlocked){
+    sec.innerHTML = `
+      <div class="es-stamp">结案</div>
+      <div class="es-t">结局卷宗已启封</div>
+      <div class="es-d">证物俱齐，讹传已清。太皇太后求情、百官保举、从轻发落、贬谪黄州——四幕结局，等你揭晓。</div>
+      <button class="btn-ink" id="btnEnding">启封结局 · 淡墨转场</button>`;
+    $('btnEnding').addEventListener('click', ()=>go('ending'));
+    if(!state.done){ state.done = true; saveState(); setTimeout(()=>toast('封印已解除 · 可启封结局'), 600); }
+  }else{
+    sec.innerHTML = `
+      <div class="es-stamp">封</div>
+      <div class="es-t">结局卷宗 · 封存中</div>
+      <div class="es-d">此卷存于御史台库房，需集齐全部证物方可启封。</div>
+      <div class="es-progress">证物 ${state.clues.length}/${TOTAL_CLUES} · 纠误 ${state.myths.length}/${TOTAL_MYTHS} · 集齐进度 ${pct}%</div>`;
+  }
+}
+
+/* ---------- 渲染：进度 ---------- */
+function pgRow(label, cur, total, cls){
+  const p = total? Math.round(cur/total*100) : 0;
+  return `<div class="pg-item ${cls}">
+    <div class="pg-label"><span>${label}</span><b>${cur} / ${total}</b></div>
+    <div class="pg-track"><div class="pg-fill" style="width:${p}%"></div></div>
+  </div>`;
+}
+function renderProgress(){
+  $('progressPanel').innerHTML =
+    pgRow('证物 · 舆论与朝堂与案件', state.clues.length, TOTAL_CLUES, 'pg-cin') +
+    pgRow('讹传纠正', state.myths.length, TOTAL_MYTHS, 'pg-moss') +
+    pgRow('人物档案', state.people.length, TOTAL_PEOPLE, '');
+  $('sideProgress').innerHTML =
+    pgRow('证物', state.clues.length, TOTAL_CLUES, 'pg-cin') +
+    pgRow('纠误', state.myths.length, TOTAL_MYTHS, 'pg-moss') +
+    pgRow('人物', state.people.length, TOTAL_PEOPLE, '');
+}
+
+/* ---------- 渲染：结局视图 ---------- */
+let actIdx = 0;
+function renderActs(){
+  const box = $('acts');
+  const a = ACTS[actIdx];
+  box.innerHTML = `
+    <div class="act-card">
+      <div class="ac-head"><span class="ac-t">${a.no} · ${a.t}</span><span class="ac-no">${a.no}</span></div>
+      <div class="ac-body">
+        <div class="act-quote">${a.quote.map(q=>esc(q)+'<br>').join('')}<span class="q-src">—— ${esc(a.src)}</span></div>
+        <div class="act-narr">${a.narr}</div>
+      </div>
+    </div>
+    <button class="btn-ink act-next" id="btnNextAct">${actIdx < ACTS.length-1 ? '续看下一幕' : '阅毕，看结案陈词'}</button>`;
+  $('btnNextAct').addEventListener('click', ()=>{
+    actIdx++;
+    if(actIdx >= ACTS.length){ renderConclusion(); renderQuiz(); $('btnNextAct').remove(); $('acts').scrollIntoView({behavior:'smooth', block:'start'}); }
+    else { renderActs(); window.scrollTo({top:0, behavior:'smooth'}); }
+  });
+}
+function renderConclusion(){
+  const box = $('conclusion');
+  if(box.dataset.rendered) return;
+  box.dataset.rendered = '1';
+  box.innerHTML = `
+    <div class="conclusion">
+      <h3>结案陈词</h3>
+      <p style="text-align:center;font-size:.95em;color:var(--ink-2);margin-bottom:20px;letter-spacing:.08em;">
+        元丰二年，一场由诗文引燃的党争之火几乎烧死苏轼；<br>
+        最终，求情者的眼泪、百官的保举与皇帝的一念之仁，把火势压了下去。<br>
+        <b style="color:var(--cin);">他失去的是仕途，得到的是“苏东坡”。</b>
+      </p>
+      <div class="kp-grid">
+        ${KPS.map(k=>`<div class="kp"><b>${k.k}</b>${k.v}</div>`).join('')}
+      </div>
+    </div>`;
+}
+function renderQuiz(){
+  const box = $('quiz');
+  if(box.dataset.rendered) return;
+  box.dataset.rendered = '1';
+  let answered = 0;
+  box.innerHTML = `
+    <div class="quiz-box">
+      <h4>结案复核</h4>
+      ${QUIZ.map((q,qi)=>`
+        <div class="q-item" data-q="${qi}">
+          <div class="q-q">${qi+1}. ${q.q}</div>
+          <div class="q-opts">
+            ${q.opts.map(o=>`<button class="q-opt" data-q="${qi}" data-k="${o.k}">${o.k}. ${o.t}</button>`).join('')}
+          </div>
+          <div class="q-ex"></div>
+        </div>`).join('')}
+      <div class="quiz-done" id="quizDone">
+        <span class="stamp fill" style="font-size:1.1em;letter-spacing:.4em;padding:.45em 1.3em;">复核通过 · 结案</span>
+        <p>你已完整看懂乌台诗案：为什么被抓、谁陷害他、罪名是什么、为何从轻发落。</p>
+      </div>
+    </div>`;
+  box.querySelectorAll('.q-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const qi = +btn.getAttribute('data-q');
+      const item = box.querySelector(`.q-item[data-q="${qi}"]`);
+      if(item.classList.contains('done')) return;
+      const q = QUIZ[qi];
+      const chosen = btn.getAttribute('data-k');
+      const correct = q.opts.find(o=>o.ok);
+      item.querySelectorAll('.q-opt').forEach(b=>b.disabled = true);
+      if(chosen === correct.k){
+        btn.classList.add('ok');
+        item.querySelectorAll('.q-opt:not(.ok)').forEach(b=>b.classList.add('muted'));
+        item.querySelector('.q-ex').className = 'q-ex ok-c';
+      }else{
+        btn.classList.add('no');
+        item.querySelector(`.q-opt[data-k="${correct.k}"]`).classList.add('ok');
+        item.querySelectorAll('.q-opt.ok,.q-opt.no').forEach(b=>{ if(!b.classList.contains('ok')) b.classList.add('muted'); });
+        item.querySelectorAll('.q-opt:not(.ok):not(.no)').forEach(b=>b.classList.add('muted'));
+        item.querySelector('.q-ex').className = 'q-ex no-c';
+      }
+      item.querySelector('.q-ex').textContent = (chosen === correct.k ? '回答正确。' : '答错了。') + q.ex;
+      item.classList.add('done');
+      answered++;
+      if(answered === QUIZ.length) $('quizDone').style.display = 'block';
+    });
+  });
+}
+
+/* ---------- 视图路由 ---------- */
+function showView(name){
+  ['cover','board','ending'].forEach(v=>{
+    $('view-'+v).classList.toggle('hidden', v!==name);
+  });
+  if(name==='board'){ renderAll(); window.scrollTo(0,0); }
+  if(name==='ending'){ actIdx = 0; renderActs(); window.scrollTo(0,0); }
+}
+function go(name){
+  if(name === location.hash.replace('#','')) { showView(name); return; }
+  if(name === 'ending'){ inkTo(()=>{ location.hash = 'ending'; }); }
+  else { location.hash = name; }
+}
+window.addEventListener('hashchange', ()=>{
+  const h = location.hash.replace('#','');
+  const v = ['cover','board','ending'].includes(h) ? h : 'cover';
+  if(h === 'ending' && !isUnlocked()){ location.hash = 'board'; return; }
+  showView(v);
+});
+
+function renderAll(){
+  renderGroups(); renderMyths(); renderPeople(); renderChain();
+  renderTimeline(); renderEndingSec(); renderProgress();
+}
+
+/* ---------- 事件 ---------- */
+$('btnOpen').addEventListener('click', ()=>go('board'));
+$('btnBackBoard').addEventListener('click', ()=>go('board'));
+$('btnRestart').addEventListener('click', ()=>{
+  state.clues = []; state.myths = []; state.people = []; state.done = false;
+  saveState();
+  ['conclusion','quiz'].forEach(id=>{ const el = $(id); delete el.dataset.rendered; el.innerHTML=''; });
+  go('cover');
+  toast('卷宗已重置 · 可重新探案');
+});
+
+/* ---------- 启动 ---------- */
+loadState();
+(function init(){
+  const h = location.hash.replace('#','');
+  if(h === 'ending' && !isUnlocked()) location.hash = 'board';
+  else showView(h && ['cover','board','ending'].includes(h) ? h : 'cover');
+})();
+</script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->
